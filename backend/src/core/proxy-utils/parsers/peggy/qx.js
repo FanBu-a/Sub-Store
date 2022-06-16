@@ -1,3 +1,5 @@
+import * as peggy from 'peggy';
+const grammars = String.raw`
 // global initializer
 {{
     function $set(obj, path, value) {
@@ -27,8 +29,7 @@
             $set(proxy, "ws-opts.path", obfs.path);
             $set(proxy, "ws-opts.headers.Host", obfs.host);
         } else if (obfs.type === "over-tls") {
-            proxy.tls = true;
-            proxy.sni = proxy.sni || proxy.server;
+            throw new Error("over-tls is not supported");
         } else if (obfs.type === "http") {
             proxy.network = "http";
             $set(proxy, "http-opts.path", obfs.path);
@@ -143,9 +144,7 @@ fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
 tls_host = comma "tls-host" equals sni:domain { proxy.sni = sni; }
 tls_verification = comma "tls-verification" equals flag:bool { 
-    if (!flag) {
-        proxy["skip-cert-verify"] = true;
-    }
+    proxy["skip-cert-verify"] = !flag;
 }
 
 obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws") { obfs.type = type; return type; }
@@ -166,3 +165,11 @@ comma = _ "," _
 equals = _ "=" _
 _ = [ \r\t]*
 bool = b:("true"/"false") { return b === "true" }
+`;
+let parser;
+export default function getParser() {
+    if (!parser) {
+        parser = peggy.generate(grammars);
+    }
+    return parser;
+}
